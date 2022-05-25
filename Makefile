@@ -1,20 +1,20 @@
 # //----------------------------------------------------------------------//
-# // The MIT License 
-# // 
+# // The MIT License
+# //
 # // Copyright (c) 2008 Abhinav Agarwal, Alfred Man Cheuk Ng
 # // Contact: abhiag@gmail.com
-# // 
-# // Permission is hereby granted, free of charge, to any person 
-# // obtaining a copy of this software and associated documentation 
-# // files (the "Software"), to deal in the Software without 
+# //
+# // Permission is hereby granted, free of charge, to any person
+# // obtaining a copy of this software and associated documentation
+# // files (the "Software"), to deal in the Software without
 # // restriction, including without limitation the rights to use,
 # // copy, modify, merge, publish, distribute, sublicense, and/or sell
 # // copies of the Software, and to permit persons to whom the
 # // Software is furnished to do so, subject to the following conditions:
-# // 
+# //
 # // The above copyright notice and this permission notice shall be
 # // included in all copies or substantial portions of the Software.
-# // 
+# //
 # // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 # // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
 # // OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -58,7 +58,7 @@ bsvsrcs = \
         $(srcdir)/mkReedSolomon.bsv \
         $(srcdir)/file_interface.cpp \
         $(srcdir)/mkTestBench.bsv \
-        $(srcdir)/funcunit.bsv 
+        $(srcdir)/funcunit.bsv
 
 
 sim_bsvsrcs = \
@@ -89,7 +89,7 @@ BSC_COMP = bsc
 BSC_FLAGS = -u -aggressive-conditions -keep-fires -no-show-method-conf \
 	-steps-warn-interval 200000 -steps-max-intervals 10 -show-schedule +RTS -K4000M -RTS
 
-BSC_VOPTS = -elab -verilog 
+BSC_VOPTS = -elab -verilog
 
 BSC_BAOPTS = -sim
 
@@ -98,7 +98,7 @@ BSC_BAOPTS = -sim
 file_interface.o : file_interface.cpp
 	gcc -c -DDATA_FILE_PATH=\"./input.dat\" \
 	       -DOUT_DATA_FILE_PATH=\"./output.dat\" \
-		file_interface.cpp
+		file_interface.cpp -fPIC
 
 # Run the bluespec compiler
 
@@ -130,4 +130,3 @@ junk += $(schedule_rpt)  *.use *.bi *.bo *.v bsc.log \
 
 clean :
 	rm -rf $(junk) *~ \#* *.h *.o *.cxx *.ba a.out preproc
-
