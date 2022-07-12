@@ -31,38 +31,11 @@
 
 default : mkTestBench
 
-#--------------------------------------------------------------------
-# Sources
-#--------------------------------------------------------------------
-
-
-
 # Bluespec sources
-
 srcdir  = .
 sim_srcdir = $(srcdir)/simulate
 
 toplevel_module = mkTestBench
-
-
-bsvsrcs = \
-	$(srcdir)/RSParameters.bsv \
-	$(srcdir)/GFTypes.bsv \
-        $(srcdir)/GFArith.bsv \
-	$(srcdir)/MFIFO.bsv \
-        $(srcdir)/SyndromeParallel.bsv \
-        $(srcdir)/Berlekamp.bsv \
-        $(srcdir)/ChienSearch.bsv \
-        $(srcdir)/ErrorMagnitude.bsv \
-        $(srcdir)/ErrorCorrector.bsv \
-        $(srcdir)/mkReedSolomon.bsv \
-        $(srcdir)/file_interface.cpp \
-        $(srcdir)/mkTestBench.bsv \
-        $(srcdir)/funcunit.bsv
-
-
-sim_bsvsrcs = \
-
 
 cppdir = $(srcdir)
 
@@ -74,59 +47,53 @@ cppsrcs = $(cppdir)/preproc.cpp
 
 # compile & run the preproc to generate the GF inverse logic.
 
-preproc.o : $(notdir $(cppsrcs))
+preproc.o: $(notdir $(cppsrcs))
 	$(CXX) -c -o preproc.o preproc.cpp
 
-preproc : preproc.o
+preproc: preproc.o
 	$(CXX) -o preproc preproc.o
 
-
-GFInv.bsv : preproc $(notdir $(bsvsrcs))
+GFInv.bsv: preproc
 	./preproc RSParameters.bsv GFInv.bsv
 
 BSC_COMP = bsc
-
 BSC_FLAGS = -u -aggressive-conditions -keep-fires -no-show-method-conf \
 	-steps-warn-interval 200000 -steps-max-intervals 10 -show-schedule +RTS -K4000M -RTS
 
 BSC_VOPTS = -elab -verilog
-
 BSC_BAOPTS = -sim
 
-# run gcc
+BDIR = build
+VDIR = verilog
+IDIR = info
+SDIR = sim
 
-file_interface.o : file_interface.cpp
-	gcc -c -DDATA_FILE_PATH=\"./input.dat\" \
-	       -DOUT_DATA_FILE_PATH=\"./output.dat\" \
-		file_interface.cpp -fPIC
+# run gcc
+file_interface.o: file_interface.cpp
+	gcc -c -DDATA_FILE_PATH=\"./input.dat\" -DOUT_DATA_FILE_PATH=\"./output.dat\" file_interface.cpp -fPIC
 
 # Run the bluespec compiler
+mkTestBench.ba: GFInv.bsv $(BDIR) $(VDIR) $(IDIR)
+	$(BSC_COMP) $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) -vdir $(VDIR) $(BSC_VOPTS) mkReedSolomon.bsv
+	$(BSC_COMP) $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) -vdir $(VDIR) $(BSC_BAOPTS) -g $(toplevel_module) $(toplevel_module).bsv
 
+mkTestBench: mkTestBench.ba file_interface.o $(SDIR)
+	$(BSC_COMP) $(BSC_BAOPTS) -simdir $(SDIR) -e $(toplevel_module) $(BDIR)/*.ba file_interface.o
 
-mkTestBench.ba : GFInv.bsv $(notdir $(bsvsrcs) $(sim_bsvsrcs))
-	$(BSC_COMP) $(BSC_FLAGS) $(BSC_VOPTS) mkReedSolomon.bsv
-	$(BSC_COMP) $(BSC_FLAGS) $(BSC_BAOPTS) -g $(toplevel_module) $(toplevel_module).bsv
-
-mkTestBench : mkTestBench.ba file_interface.o
-	$(BSC_COMP) $(BSC_BAOPTS) -e $(toplevel_module) *.ba file_interface.o
-
+$(BDIR) $(VDIR) $(IDIR) $(SDIR):
+	mkdir -p $@
 
 # Create a schedule file
-
 schedule_rpt = schedule.rpt
-$(schedule_rpt) : $(notdir $(bsvsrcs) $(bsvclibsrcs))
-	rm -rf *.v
-	$(BSC_COMP) $(BSC_FLAGS) $(BSC_BAOPTS) -show-schedule -show-rule-rel \* \* -g $(toplevel_module) $(toplevel_module).bsv
-
+$(schedule_rpt):
+	$(BSC_COMP) $(BSC_FLAGS) -bdir $(BDIR) $(BSC_BAOPTS) -show-schedule -show-rule-rel \* \* -g $(toplevel_module) $(toplevel_module).bsv
 
 #--------------------------------------------------------------------
 # Clean up
 #--------------------------------------------------------------------
 
-junk += $(schedule_rpt)  *.use *.bi *.bo *.v bsc.log \
-	diff.out *.sched  directc.*
+junk += $(schedule_rpt) diff.out $(BDIR) $(VDIR) $(IDIR) $(SDIR)
 
 .PHONY: clean
-
 clean :
-	rm -rf $(junk) *~ \#* *.h *.o *.cxx *.ba a.out preproc
+	rm -rf $(junk) *.cxx *.h *.so *.o a.out preproc GFInv.bsv
