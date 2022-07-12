@@ -85,8 +85,8 @@ $(BDIR) $(VDIR) $(IDIR) $(SDIR):
 
 # Create a schedule file
 schedule_rpt = schedule.rpt
-$(schedule_rpt):
-	$(BSC_COMP) $(BSC_FLAGS) -bdir $(BDIR) $(BSC_BAOPTS) -show-schedule -show-rule-rel \* \* -g $(toplevel_module) $(toplevel_module).bsv
+$(schedule_rpt): GFInv.bsv $(BDIR) $(IDIR)
+	$(BSC_COMP) $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) $(BSC_BAOPTS) -show-schedule -show-rule-rel \* \* -g $(toplevel_module) $(toplevel_module).bsv
 
 #--------------------------------------------------------------------
 # Clean up
@@ -96,4 +96,4 @@ junk += $(schedule_rpt) diff.out $(BDIR) $(VDIR) $(IDIR) $(SDIR)
 
 .PHONY: clean
 clean :
-	rm -rf $(junk) *.cxx *.h *.so *.o a.out preproc GFInv.bsv
+	rm -rf $(junk) *.so *.o a.out preproc GFInv.bsv
