@@ -29,32 +29,25 @@
 # Makefile for Reed Solomon decoder
 #-----------------------------------------------------------------------
 
-default : mkTestBench
+default : all
 
-# Bluespec sources
+# Sources
 srcdir  = .
-sim_srcdir = $(srcdir)/simulate
-
 toplevel_module = mkTestBench
 
-cppdir = $(srcdir)
-
-cppsrcs = $(cppdir)/preproc.cpp
+PRIMITIVE_POLY ?= "0b100011101"
+K ?= 223
+T ?= 16
+N ?= 10
+NERR ?= $(T)
 
 #--------------------------------------------------------------------
 # Build rules
 #--------------------------------------------------------------------
 
-# compile & run the preproc to generate the GF inverse logic.
-
-preproc.o: $(notdir $(cppsrcs))
-	$(CXX) -c -o preproc.o preproc.cpp
-
-preproc: preproc.o
-	$(CXX) -o preproc preproc.o
-
-GFInv.bsv: preproc
-	./preproc RSParameters.bsv GFInv.bsv
+# run the rs_model to generate the GF inverse logic and test files
+input.dat ref_output.dat RSParameters.bsv:
+	./rs_model.py -P $(PRIMITIVE_POLY) -K $(K) -T $(T) -N $(N) -Nerr $(NERR) -bsv RSParameters.bsv
 
 BSC_COMP = bsc
 BSC_FLAGS = -u -aggressive-conditions -keep-fires -no-show-method-conf \
@@ -63,37 +56,44 @@ BSC_FLAGS = -u -aggressive-conditions -keep-fires -no-show-method-conf \
 BSC_VOPTS = -elab -verilog
 BSC_BAOPTS = -sim
 
-BDIR = build
-VDIR = verilog
-IDIR = info
-SDIR = sim
+BDIR ?= build
+VDIR ?= verilog
+IDIR ?= info
+SDIR ?= sim
 
 # run gcc
 file_interface.o: file_interface.cpp
 	gcc -c -DDATA_FILE_PATH=\"./input.dat\" -DOUT_DATA_FILE_PATH=\"./output.dat\" file_interface.cpp -fPIC
 
 # Run the bluespec compiler
-mkTestBench.ba: GFInv.bsv $(BDIR) $(VDIR) $(IDIR)
+$(BDIR)/$(toplevel_module).ba: RSParameters.bsv $(BDIR) $(VDIR) $(IDIR)
 	$(BSC_COMP) $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) -vdir $(VDIR) $(BSC_VOPTS) mkReedSolomon.bsv
 	$(BSC_COMP) $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) -vdir $(VDIR) $(BSC_BAOPTS) -g $(toplevel_module) $(toplevel_module).bsv
 
-mkTestBench: mkTestBench.ba file_interface.o $(SDIR)
-	$(BSC_COMP) $(BSC_BAOPTS) -simdir $(SDIR) -e $(toplevel_module) $(BDIR)/*.ba file_interface.o
+$(toplevel_module): $(BDIR)/$(toplevel_module).ba file_interface.o $(SDIR)
+	$(BSC_COMP) $(BSC_BAOPTS) -simdir $(SDIR) -e $(toplevel_module) -o $(toplevel_module) $(BDIR)/*.ba file_interface.o
+
+all: input.dat output.dat ref_output.dat
+	diff -s -q output.dat ref_output.dat
+
+output.dat: $(toplevel_module)
+	./$(toplevel_module)
 
 $(BDIR) $(VDIR) $(IDIR) $(SDIR):
 	mkdir -p $@
 
-# Create a schedule file
-schedule_rpt = schedule.rpt
-$(schedule_rpt): GFInv.bsv $(BDIR) $(IDIR)
+# Create a schedule files
+$(IDIR)/$(toplevel_module).sched: RSParameters.bsv $(BDIR) $(IDIR)
 	$(BSC_COMP) $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) $(BSC_BAOPTS) -show-schedule -show-rule-rel \* \* -g $(toplevel_module) $(toplevel_module).bsv
 
 #--------------------------------------------------------------------
 # Clean up
 #--------------------------------------------------------------------
 
-junk += $(schedule_rpt) diff.out $(BDIR) $(VDIR) $(IDIR) $(SDIR)
-
 .PHONY: clean
 clean :
-	rm -rf $(junk) *.so *.o a.out preproc GFInv.bsv
+	rm -rf $(BDIR) $(VDIR) $(IDIR) $(SDIR) *.bo *.ba *.v *.sched *.so *.o $(toplevel_module) RSParameters.bsv *.dat
+
+.PHONY: clean_dat
+clean_dat :
+	rm -rf *.dat

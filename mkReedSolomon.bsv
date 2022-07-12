@@ -1,20 +1,20 @@
 //----------------------------------------------------------------------//
-// The MIT License 
-// 
+// The MIT License
+//
 // Copyright (c) 2008 Abhinav Agarwal, Alfred Man Cheuk Ng
 // Contact: abhiag@gmail.com
-// 
-// Permission is hereby granted, free of charge, to any person 
-// obtaining a copy of this software and associated documentation 
-// files (the "Software"), to deal in the Software without 
+//
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without
 // restriction, including without limitation the rights to use,
 // copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the
 // Software is furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
 // OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -28,6 +28,7 @@
 import GetPut::*;
 import FIFO::*;
 import GFTypes::*;
+import RSParameters::*;
 import GFArith::*;
 import SyndromeParallel::*;
 import Berlekamp::*;
@@ -35,13 +36,13 @@ import ChienSearch::*;
 import ErrorMagnitude::*;
 import ErrorCorrector::*;
 
-// Uncomment line below which defines BUFFER_LENGTH if   
-// you get a compile error regarding BUFFER_LENGTH       
+// Uncomment line below which defines BUFFER_LENGTH if
+// you get a compile error regarding BUFFER_LENGTH
 
 `define BUFFER_LENGTH  255
 
 // ---------------------------------------------------------
-// Reed-Solomon interface 
+// Reed-Solomon interface
 // ---------------------------------------------------------
 interface IReedSolomon;
    interface Put#(Byte) rs_t_in;
@@ -52,38 +53,38 @@ interface IReedSolomon;
 endinterface
 
 // ---------------------------------------------------------
-// Reed-Solomon module 
+// Reed-Solomon module
 // ---------------------------------------------------------
 (* synthesize *)
 module mkReedSolomon (IReedSolomon);
 
    ISyndrome         syndrome          <- mkSyndromeParallel;
-   IBerlekamp        berl              <- mkBerlekamp; 
+   IBerlekamp        berl              <- mkBerlekamp;
    IChienSearch      chien_search      <- mkChienSearch;
    IErrorMagnitude   error_magnitude   <- mkErrorMagnitude;
    IErrorCorrector   error_corrector   <- mkErrorCorrector;
-   
+
    // FIFOs
    FIFO#(Byte)               t_in                          <- mkSizedFIFO(2);
    FIFO#(Byte)               k_in                          <- mkSizedFIFO(2);
    FIFO#(Byte)               stream_in                     <- mkSizedFIFO(2);
    FIFO#(Byte)               stream_out                    <- mkSizedFIFO(2);
    FIFO#(Bool)               cant_correct_out              <- mkSizedFIFO(3);
-   
+
    // FIFOs for input of syndrome module
    FIFO#(Byte)               ff_n_to_syndrome              <- mkSizedFIFO(1);
    FIFO#(Byte)               ff_r_to_syndrome              <- mkSizedFIFO(2);
-   
+
    // FIFOs for input of berlekamp module
    FIFO#(Byte)               ff_t_to_berl             <- mkSizedFIFO(2);
    FIFO#(Syndrome#(TwoT))    ff_s_to_berl             <- mkSizedFIFO(1);
 
-   // FIFOs for input of chien searach module   
+   // FIFOs for input of chien searach module
    FIFO#(Byte)               ff_t_to_chien                 <- mkSizedFIFO(3);
    FIFO#(Byte)               ff_k_to_chien                 <- mkSizedFIFO(3);
    FIFO#(Bool)               ff_no_error_flag_to_chien     <- mkSizedFIFO(1);
    FIFO#(Syndrome#(T))       ff_l_to_chien                 <- mkSizedFIFO(1);
-   
+
    // FIFOs for input of error magnitude module
    FIFO#(Byte)               ff_k_to_errormag              <- mkSizedFIFO(4);
    FIFO#(Bool)               ff_no_error_flag_to_errormag  <- mkSizedFIFO(2);
@@ -91,13 +92,13 @@ module mkReedSolomon (IReedSolomon);
    FIFO#(Maybe#(Byte))       ff_alpha_inv_to_errormag      <- mkSizedFIFO(2);
    FIFO#(Syndrome#(T))       ff_l_to_errormag              <- mkSizedFIFO(1);
    FIFO#(Syndrome#(T))       ff_w_to_errormag              <- mkSizedFIFO(2);
-   
+
    // FIFOs for input of error corrector module
    FIFO#(Byte)               ff_r_to_errorcor              <- mkSizedFIFO(`BUFFER_LENGTH);
    FIFO#(Byte)               ff_e_to_errorcor              <- mkSizedFIFO(2);
    FIFO#(Byte)               ff_k_to_errorcor              <- mkSizedFIFO(5);
    FIFO#(Bool)               ff_no_error_flag_to_errorcor  <- mkSizedFIFO(3);
-   
+
    // Regs
    Reg#(Bool)     info_count_done      <- mkReg (True);
    Reg#(Bool)     parity_count_done    <- mkReg (True);
@@ -110,7 +111,7 @@ module mkReedSolomon (IReedSolomon);
    rule init (state == 0);
       state <= 1;
    endrule
-   
+
    // ----------------------------------
    rule read_mac (state == 1 && info_count_done == True && parity_count_done == True);
       let k = k_in.first();
@@ -129,7 +130,7 @@ module mkReedSolomon (IReedSolomon);
       t_in.deq();
       ff_t_to_berl.enq(t);
       ff_t_to_chien.enq(t);
-      
+
       let n = k + 2 * t;
       ff_n_to_syndrome.enq(n);
 
@@ -138,7 +139,7 @@ module mkReedSolomon (IReedSolomon);
          parity_count_done <= True;
       else
          parity_count_done <= False;
-      
+
       $display ("  [reedsol] read_mac z = %d, k = %d, t = %d", 255 - k - 2*t, k, t);
    endrule
 
@@ -152,7 +153,7 @@ module mkReedSolomon (IReedSolomon);
          info_count_done <= True;
       info_count <= info_count - 1;
    endrule
-   
+
    rule read_parity (state == 1 && info_count_done == True && parity_count_done == False);
       let datum = stream_in.first ();
       $display ("  [reedsol]  read_parity [%d] = %d", parity_count, datum);
@@ -205,7 +206,7 @@ module mkReedSolomon (IReedSolomon);
       // $display ("    > > [no error flag from syndrome] cycle count: %d", cycle_count);
       let no_error <- berl.no_error_flag_out();
       ff_no_error_flag_to_chien.enq(no_error);
-      ff_no_error_flag_to_errormag.enq(no_error);      
+      ff_no_error_flag_to_errormag.enq(no_error);
       ff_no_error_flag_to_errorcor.enq(no_error);
    endrule
 
@@ -255,13 +256,13 @@ module mkReedSolomon (IReedSolomon);
       let datum <- chien_search.cant_correct_flag_out();
       cant_correct_out.enq(datum);
    endrule
-   
+
    rule loc_from_chien (state == 1);
       // $display ("    > > [loc from chien] cycle count: %d", cycle_count);
       let datum <- chien_search.loc_out();
       ff_loc_to_errormag.enq(datum);
    endrule
-   
+
    rule alpha_inv_from_chien (state == 1);
       // $display ("    > > [alpha inv from chien] cycle count: %d", cycle_count);
       let datum <- chien_search.alpha_inv_out();
@@ -273,7 +274,7 @@ module mkReedSolomon (IReedSolomon);
       let datum <- chien_search.lambda_out();
       ff_l_to_errormag.enq(datum);
    endrule
-   
+
    // ----------------------------------
    // rules for error_magnitude
    rule k_to_errormag (state == 1);
@@ -287,38 +288,38 @@ module mkReedSolomon (IReedSolomon);
       let datum = ff_no_error_flag_to_errormag.first();
       error_magnitude.no_error_flag_in(datum);
    endrule
-   
+
    rule loc_to_errormag (state == 1);
       ff_loc_to_errormag.deq();
       let datum = ff_loc_to_errormag.first();
       error_magnitude.loc_in(datum);
-   endrule   
-   
+   endrule
+
    rule alpha_inv_to_errormag (state == 1);
       ff_alpha_inv_to_errormag.deq();
       let datum = ff_alpha_inv_to_errormag.first();
       error_magnitude.alpha_inv_in(datum);
-   endrule   
+   endrule
 
    rule l_to_errormag (state == 1);
       ff_l_to_errormag.deq();
       let datum = ff_l_to_errormag.first();
       error_magnitude.lambda_in(datum);
-   endrule   
-      
+   endrule
+
    rule w_to_errormag (state == 1);
       // $display ("    > > [w to chien] cycle count: %d", cycle_count);
       ff_w_to_errormag.deq();
       let datum = ff_w_to_errormag.first();
       error_magnitude.omega_in(datum);
    endrule
-   
+
    rule e_from_errormag (state == 1);
       // $display ("    > > [e from chien] cycle count: %d", cycle_count);
       let datum <- error_magnitude.error_out();
       ff_e_to_errorcor.enq(datum);
    endrule
-   
+
    // ----------------------------------
    // rules for error_corrector
    rule k_to_error_corrector (state == 1);
@@ -341,31 +342,30 @@ module mkReedSolomon (IReedSolomon);
       let datum = ff_r_to_errorcor.first ();
       error_corrector.r_in (datum);
    endrule
-   
+
    rule e_to_error_corrector (state == 1);
       // $display ("    > > [e to error corector] cycle count: %d", cycle_count);
       ff_e_to_errorcor.deq ();
       let error = ff_e_to_errorcor.first ();
       error_corrector.e_in (error);
    endrule
-   
+
    rule d_from_error_corrector (state == 1);
       // $display ("    > > [d from error corector] cycle count: %d", cycle_count);
       let corrected_datum <- error_corrector.d_out ();
       stream_out.enq (corrected_datum);
    endrule
-   
+
    // ----------------------------------
    rule cycle (state == 1);
       $display ("%d  -------------------------", cycle_count);
       cycle_count <= cycle_count + 1;
    endrule
-   
+
    interface Put rs_t_in     = fifoToPut(t_in);
    interface Put rs_k_in     = fifoToPut(k_in);
    interface Put rs_input    = fifoToPut(stream_in);
    interface Get rs_output   = fifoToGet(stream_out);
    interface Get rs_flag     = fifoToGet(cant_correct_out);
-      
-endmodule
 
+endmodule

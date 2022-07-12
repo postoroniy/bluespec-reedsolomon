@@ -1,20 +1,20 @@
 //----------------------------------------------------------------------//
-// The MIT License 
-// 
+// The MIT License
+//
 // Copyright (c) 2008 Abhinav Agarwal, Alfred Man Cheuk Ng
 // Contact: abhiag@gmail.com
-// 
-// Permission is hereby granted, free of charge, to any person 
-// obtaining a copy of this software and associated documentation 
-// files (the "Software"), to deal in the Software without 
+//
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without
 // restriction, including without limitation the rights to use,
 // copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the
 // Software is furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
 // OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -25,30 +25,31 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 //----------------------------------------------------------------------//
 
+import Vector::*;
 import FIFO::*;
-import GFArith::*;
-import GFTypes::*;
 import MFIFO::*;
 import UniqueWrappers::*;
-import Vector::*;
+import GFTypes::*;
+import GFArith::*;
+import RSParameters::*;
 
-typedef enum 
-{  CALC_D, 
-   CALC_LAMBDA, 
-   CALC_LAMBDA_2, 
+typedef enum
+{  CALC_D,
+   CALC_LAMBDA,
+   CALC_LAMBDA_2,
    CALC_LAMBDA_3,
    START,
    BERLEKAMP_DONE
 } Stage deriving (Bits, Eq);
 
 // ---------------------------------------------------------
-// Reed-Solomon Berlekamp algoritm interface 
+// Reed-Solomon Berlekamp algoritm interface
 // ---------------------------------------------------------
 interface IBerlekamp;
    // input methods
    method Action                     t_in(Byte t_new);
    method Action                     s_in(Syndrome#(TwoT) syndrome_new);
-   
+
    // output methods
    method ActionValue#(Bool)         no_error_flag_out();
    method ActionValue#(Syndrome#(T)) lambda_out();
@@ -56,25 +57,25 @@ interface IBerlekamp;
 endinterface
 
 // ---------------------------------------------------------
-// Reed-Solomon Berlekamp module 
+// Reed-Solomon Berlekamp module
 // ---------------------------------------------------------
 (* synthesize *)
 module mkBerlekamp(IBerlekamp);
-   
+
    // state elements
    // ------------------------------------------------
    // input fifos, to increase throughput, can have size > 1
    FIFO#(Byte)                     t_q             <- mkSizedFIFO(1);
    FIFO#(Syndrome#(TwoT))          syndrome_q      <- mkSizedFIFO(1);
-   
+
    // output fifos, for correctness, size need to be 1
    MFIFO#(1,Syndrome#(TPlusTwo))   c_q             <- mkMFIFO1(); // lambda
    MFIFO#(1,Syndrome#(TPlusTwo))   w_q             <- mkMFIFO1(); // omega
    MFIFO#(1,Bool)                  no_error_flag_q <- mkMFIFO1();
-  
+
    // regs
    Reg#(Syndrome#(TPlusTwo))       syn_shf_reg     <- mkRegU;
-    
+
    Reg#(Syndrome#(TPlusTwo))       p               <- mkRegU; // B
    Reg#(Syndrome#(TPlusTwo))       a               <- mkRegU; // A
 
@@ -87,16 +88,16 @@ module mkBerlekamp(IBerlekamp);
    Reg#(Bool)                      is_i_gt_2l      <- mkRegU; // is i + 1 > 2*l?
    Reg#(Stage)                     stage           <- mkReg(BERLEKAMP_DONE);
    Reg#(Byte)                      block_number    <- mkReg(0);
-   
+
    // function wrapper (for resource sharing)
    // ------------------------------------------------
    Wrapper2#(Syndrome#(TPlusTwo),
              Syndrome#(TPlusTwo),
-             Syndrome#(TPlusTwo))    gf_mult_vec  <- mkUniqueWrapper2(zipWith(gf_mult_inst));   
+             Syndrome#(TPlusTwo))    gf_mult_vec  <- mkUniqueWrapper2(zipWith(gf_mult_inst));
    Wrapper2#(Syndrome#(TPlusTwo),
              Syndrome#(TPlusTwo),
-             Syndrome#(TPlusTwo))    gf_add_vec   <- mkUniqueWrapper2(zipWith(gf_add_inst));   
-   
+             Syndrome#(TPlusTwo))    gf_add_vec   <- mkUniqueWrapper2(zipWith(gf_add_inst));
+
    // define constants
    // ------------------------------------------------
    Syndrome#(TPlusTwo) p_init = replicate(0);
@@ -111,7 +112,7 @@ module mkBerlekamp(IBerlekamp);
    Reg#(Syndrome#(TPlusTwo)) c = c_q.first;
    Reg#(Syndrome#(TPlusTwo)) w = w_q.first;
    Reg#(Bool) no_error_flag = no_error_flag_q.first;
-   
+
    // ------------------------------------------------
    rule calc_d (stage == CALC_D);
       let syn             = syndrome[i];
@@ -119,7 +120,7 @@ module mkBerlekamp(IBerlekamp);
       let d_vec          <- gf_mult_vec.func(c, newSynShiftReg); // get convolution
       let new_d           = fold( \^ ,d_vec);
       let new_no_err_flag = no_error_flag && syndrome[i] == 0;
-      
+
       if (i < 2 * t)
          begin
             syn_shf_reg <= newSynShiftReg;
@@ -139,13 +140,13 @@ module mkBerlekamp(IBerlekamp);
                   w_q.deq();
                end
          end
-      
-      $display ("  [berlekamp %d]  calc_d, L = %d, i = %d, d = %d, s [%d] = %d", 
-                block_number, l, i, new_d, i, syn);       
+
+      $display ("  [berlekamp %d]  calc_d, L = %d, i = %d, d = %d, s [%d] = %d",
+                block_number, l, i, new_d, i, syn);
    endrule
 
    // ------------------------------------------------
-   rule calc_lambda (stage == CALC_LAMBDA);   
+   rule calc_lambda (stage == CALC_LAMBDA);
       stage <= (d == 0) ? CALC_D : CALC_LAMBDA_2;
       d_dstar <= gf_mult_inst(d, dstar); // d_dstar = d * dstar
       p <= shiftInAt0(p,0); // increase polynomial p degree by 1
@@ -154,7 +155,7 @@ module mkBerlekamp(IBerlekamp);
 
       //$display ("  [berlekamp %d]  calc_lambda. d = %d, dstar = %d, i(%d) > 2*L(%d)?", block_number, d, dstar, i, l);
    endrule
-   
+
    // ------------------------------------------------
    rule calc_lambda_2 (stage == CALC_LAMBDA_2);
       let d_dstar_p <- gf_mult_vec.func(replicate(d_dstar),p);
@@ -164,11 +165,11 @@ module mkBerlekamp(IBerlekamp);
       if (is_i_gt_2l)  // p = old_c only if i + 1 > 2 * l
          p <= c;
 
-      //$display ("  [berlekamp %d] calc_lambda_2. c (%x) = d_d* (%x) x p (%x)", block_number, new_c, d_dstar, p);      
+      //$display ("  [berlekamp %d] calc_lambda_2. c (%x) = d_d* (%x) x p (%x)", block_number, new_c, d_dstar, p);
    endrule
-   
+
    // ------------------------------------------------
-   rule calc_lambda_3 (stage == CALC_LAMBDA_3);      
+   rule calc_lambda_3 (stage == CALC_LAMBDA_3);
       let d_dstar_a <- gf_mult_vec.func(replicate(d_dstar),a);
       let new_w     <- gf_add_vec.func(w,d_dstar_a);
       w <= new_w;
@@ -180,12 +181,12 @@ module mkBerlekamp(IBerlekamp);
             dstar <= gf_inv(d);
          end
 
-      //$display ("  [berlekamp %d] calc_lambda_3. w (%x) = d_d* (%x) x a (%x)", block_number, new_w, d_dstar, a);      
-   endrule      
+      //$display ("  [berlekamp %d] calc_lambda_3. w (%x) = d_d* (%x) x a (%x)", block_number, new_w, d_dstar, a);
+   endrule
 
    // ------------------------------------------------
    rule start_new_syndrome (stage == START);
-      //$display ("  [berlekamp %d] start_new_syndrome t : %d, s : %x", block_number, t, syndrome);      
+      //$display ("  [berlekamp %d] start_new_syndrome t : %d, s : %x", block_number, t, syndrome);
 
       block_number <= block_number + 1;
       // initiatize state
@@ -202,43 +203,43 @@ module mkBerlekamp(IBerlekamp);
       // next state becomes calc_d
       stage <= CALC_D;
    endrule
-   
+
    // ------------------------------------------------
-   method Action t_in (Byte t_new);      
+   method Action t_in (Byte t_new);
       $display ("  [berlekamp %d]  t_in : %d", block_number, t_new);
-      
+
       t_q.enq(t_new);
    endmethod
-   
+
    // ------------------------------------------------
-   method Action s_in(Syndrome#(TwoT) syndrome_new) if (stage == BERLEKAMP_DONE);      
+   method Action s_in(Syndrome#(TwoT) syndrome_new) if (stage == BERLEKAMP_DONE);
       //$display ("  [berlekamp %d]  s_in : %x", block_number, syndrome_new);
       stage <= START;
       syndrome_q.enq(syndrome_new);
-   endmethod   
-   
+   endmethod
+
    // ------------------------------------------------
    method ActionValue#(Bool) no_error_flag_out() if (stage == BERLEKAMP_DONE);
       $display ("  [berlekamp %d]  no_error_flag_out : %d", block_number, no_error_flag);
-      
+
       no_error_flag_q.deq();
       return no_error_flag;
    endmethod
-   
+
    // ------------------------------------------------
-   method ActionValue#(Syndrome#(T)) lambda_out() if (stage == BERLEKAMP_DONE);                       
+   method ActionValue#(Syndrome#(T)) lambda_out() if (stage == BERLEKAMP_DONE);
       //$display ("  [berlekamp %d]  lambda_out : %x", block_number, c);
-      
-      c_q.deq();      
+
+      c_q.deq();
       return take(tail(c)); // drop lsb && msb
    endmethod
-   
+
    // ------------------------------------------------
    method ActionValue#(Syndrome#(T)) omega_out() if (stage == BERLEKAMP_DONE);
       //$display ("  [berlekamp %d]  omega_out : %x", block_number, w);
-      
+
       w_q.deq();
       return take(tail(w)); // drop lsb && msb
    endmethod
-   
+
 endmodule
