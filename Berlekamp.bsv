@@ -152,7 +152,6 @@ module mkBerlekamp(IBerlekamp);
       p <= shiftInAt0(p,0); // increase polynomial p degree by 1
       a <= shiftInAt0(a,0); // increase polynomial a degree by 1
       is_i_gt_2l <= (i > 2 * l); // check i + 2 > 2 * l?
-
       //$display ("  [berlekamp %d]  calc_lambda. d = %d, dstar = %d, i(%d) > 2*L(%d)?", block_number, d, dstar, i, l);
    endrule
 
@@ -164,7 +163,6 @@ module mkBerlekamp(IBerlekamp);
       stage <= CALC_LAMBDA_3;
       if (is_i_gt_2l)  // p = old_c only if i + 1 > 2 * l
          p <= c;
-
       //$display ("  [berlekamp %d] calc_lambda_2. c (%x) = d_d* (%x) x p (%x)", block_number, new_c, d_dstar, p);
    endrule
 
@@ -180,14 +178,12 @@ module mkBerlekamp(IBerlekamp);
             l <= i - l;
             dstar <= gf_inv(d);
          end
-
       //$display ("  [berlekamp %d] calc_lambda_3. w (%x) = d_d* (%x) x a (%x)", block_number, new_w, d_dstar, a);
    endrule
 
    // ------------------------------------------------
    rule start_new_syndrome (stage == START);
       //$display ("  [berlekamp %d] start_new_syndrome t : %d, s : %x", block_number, t, syndrome);
-
       block_number <= block_number + 1;
       // initiatize state
       p <= p_init;
@@ -207,7 +203,6 @@ module mkBerlekamp(IBerlekamp);
    // ------------------------------------------------
    method Action t_in (Byte t_new);
       $display ("  [berlekamp %d]  t_in : %d", block_number, t_new);
-
       t_q.enq(t_new);
    endmethod
 
@@ -221,7 +216,6 @@ module mkBerlekamp(IBerlekamp);
    // ------------------------------------------------
    method ActionValue#(Bool) no_error_flag_out() if (stage == BERLEKAMP_DONE);
       $display ("  [berlekamp %d]  no_error_flag_out : %d", block_number, no_error_flag);
-
       no_error_flag_q.deq();
       return no_error_flag;
    endmethod
@@ -229,7 +223,6 @@ module mkBerlekamp(IBerlekamp);
    // ------------------------------------------------
    method ActionValue#(Syndrome#(T)) lambda_out() if (stage == BERLEKAMP_DONE);
       //$display ("  [berlekamp %d]  lambda_out : %x", block_number, c);
-
       c_q.deq();
       return take(tail(c)); // drop lsb && msb
    endmethod
@@ -237,9 +230,7 @@ module mkBerlekamp(IBerlekamp);
    // ------------------------------------------------
    method ActionValue#(Syndrome#(T)) omega_out() if (stage == BERLEKAMP_DONE);
       //$display ("  [berlekamp %d]  omega_out : %x", block_number, w);
-
       w_q.deq();
       return take(tail(w)); // drop lsb && msb
    endmethod
-
 endmodule

@@ -36,11 +36,6 @@ import ChienSearch::*;
 import ErrorMagnitude::*;
 import ErrorCorrector::*;
 
-// Uncomment line below which defines BUFFER_LENGTH if
-// you get a compile error regarding BUFFER_LENGTH
-
-`define BUFFER_LENGTH  255
-
 // ---------------------------------------------------------
 // Reed-Solomon interface
 // ---------------------------------------------------------
@@ -94,7 +89,7 @@ module mkReedSolomon (IReedSolomon);
    FIFO#(Syndrome#(T))       ff_w_to_errormag              <- mkSizedFIFO(2);
 
    // FIFOs for input of error corrector module
-   FIFO#(Byte)               ff_r_to_errorcor              <- mkSizedFIFO(`BUFFER_LENGTH);
+   FIFO#(Byte)               ff_r_to_errorcor              <- mkSizedFIFO(255);
    FIFO#(Byte)               ff_e_to_errorcor              <- mkSizedFIFO(2);
    FIFO#(Byte)               ff_k_to_errorcor              <- mkSizedFIFO(5);
    FIFO#(Bool)               ff_no_error_flag_to_errorcor  <- mkSizedFIFO(3);

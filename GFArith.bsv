@@ -85,7 +85,7 @@ endfunction
 // -----------------------------------------------------------
 //(* noinline *)
 function Byte alpha_n(Byte n);
-	return times_alpha_n(1,n);
+    return times_alpha_n(1,n);
 endfunction
 
 // -----------------------------------------------------------
@@ -93,7 +93,6 @@ endfunction
 function Byte times_alpha_n(Byte a, Byte n);
 //    Byte multVal = 1 << n;
 //    return gf_mult(primitive_poly,a,multVal);
-
    Byte b=a;
    for (Byte i = 0; i < n; i = i + 1)
       b=times_alpha(b);

@@ -32,17 +32,15 @@ package GFTypes;
   import Vector::*;
   import RSParameters::*;
 
-  typedef Bit#(8)	  Byte;
-  typedef Byte      Polynomial;
+  typedef Bit#(8)         Byte;
+  typedef Byte            Polynomial;
   typedef Vector#(n,Byte) Syndrome#(numeric type n);
-
 
   typedef enum
   {  NO_ERROR,
      CORRECTABLE,
      INCORRECTABLE
    } ErrInfo deriving (Bits, Eq);
-
 
   typedef TMul#(T,2) TwoT;     // 2 * T
   typedef TAdd#(T,2) TPlusTwo; // T + 2

@@ -44,7 +44,7 @@ parser.add_argument(
     "-bsv",
     nargs="?",
     type=str,
-    default="RSParameters.bsv",
+    default="",
     help="name of BSV file to save generated parameters and GF inv function",
 )
 
@@ -105,49 +105,50 @@ for i in range(2, nn - kk + 1):
 # convert gg[] to index form for quicker encoding
 gg = index_of[gg]
 
-f = open(args.bsv, "w")
-f.write(f"typedef {K} K;\ntypedef {T} T;\nBit#(8) primitive_poly = 8'b")
-for i in range(mm - 1, -1, -1):
-    f.write(f"{pp[i]}")
 
-f.write(";\nfunction Bit#(8) gf_inv(Bit#(8) a);\n\tcase (a) matches\n")
+if args.bsv:
+    f = open(args.bsv, "w")
+    f.write(f"typedef {K} K;\ntypedef {T} T;\nBit#(8) primitive_poly = 8'b")
+    for i in range(mm - 1, -1, -1):
+        f.write(f"{pp[i]}")
 
-gfinv_lut = np.zeros(nn + 1, dtype=int)
-for i in range(0, nn + 1):
-    gfinv_lut[i] = alpha_to[(nn - index_of[i]) % nn]
-    f.write(f"\t{i} : return {gfinv_lut[i]};\n")
+    f.write(";\nfunction Bit#(8) gf_inv(Bit#(8) a);\n\tcase (a) matches\n")
 
-f.write("\tendcase\nendfunction\n")
-f.close()
+    gfinv_lut = np.zeros(nn + 1, dtype=int)
+    for i in range(0, nn + 1):
+        gfinv_lut[i] = alpha_to[(nn - index_of[i]) % nn]
+        f.write(f"\t{i} : return {gfinv_lut[i]};\n")
 
-
-# /* take the string of symbols in data[i], i=0..(k-1) and encode systematically
-#    to produce 2*tt parity symbols in bb[0]..bb[2*tt-1]
-#    data[] is input and bb[] is output in polynomial form.
-#    Encoding is done by using a feedback shift register with appropriate
-#    connections specified by the elements of gg[], which was generated above.
-#    Codeword is   c(X) = data(X)*X**(nn-kk)+ b(X)          */
-def encode_rs(data):
-    bb = np.zeros(nn - kk, dtype=int)
-    for i in range(kk - 1, -1, -1):
-        feedback = index_of[data[i] ^ bb[nn - kk - 1]]
-        if feedback != -1:
-            for j in range(nn - kk - 1, 0, -1):
-                if gg[j] != -1:
-                    bb[j] = bb[j - 1] ^ alpha_to[(gg[j] + feedback) % nn]
-                else:
-                    bb[j] = bb[j - 1]
-
-            bb[0] = alpha_to[(gg[0] + feedback) % nn]
-        else:
-            for j in range(nn - kk - 1, 0, -1):
-                bb[j] = bb[j - 1]
-            bb[0] = 0
-
-    return bb
+    f.write("\tendcase\nendfunction\n")
+    f.close()
 
 
 if N > 0:
+    # /* take the string of symbols in data[i], i=0..(k-1) and encode systematically
+    #    to produce 2*tt parity symbols in bb[0]..bb[2*tt-1]
+    #    data[] is input and bb[] is output in polynomial form.
+    #    Encoding is done by using a feedback shift register with appropriate
+    #    connections specified by the elements of gg[], which was generated above.
+    #    Codeword is   c(X) = data(X)*X**(nn-kk)+ b(X)          */
+    def encode_rs(data):
+        bb = np.zeros(nn - kk, dtype=int)
+        for i in range(kk - 1, -1, -1):
+            feedback = index_of[data[i] ^ bb[nn - kk - 1]]
+            if feedback != -1:
+                for j in range(nn - kk - 1, 0, -1):
+                    if gg[j] != -1:
+                        bb[j] = bb[j - 1] ^ alpha_to[(gg[j] + feedback) % nn]
+                    else:
+                        bb[j] = bb[j - 1]
+
+                bb[0] = alpha_to[(gg[0] + feedback) % nn]
+            else:
+                for j in range(nn - kk - 1, 0, -1):
+                    bb[j] = bb[j - 1]
+                bb[0] = 0
+
+        return bb
+
     f_input = open("input.dat", "w")
     f_refout = open("ref_output.dat", "w")
     for p in range(0, N):

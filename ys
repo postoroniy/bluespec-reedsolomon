@@ -1,0 +1,20 @@
+
+read_verilog verilog/module_gf_add_inst.v
+read_verilog verilog/module_gf_mult_inst.v
+read_verilog verilog/module_times_alpha_n_v.v
+read_verilog verilog/mkBerlekamp.v
+read_verilog verilog/mkErrorCorrector.v
+read_verilog verilog/mkChienSearch.v
+read_verilog verilog/mkErrorMagnitude.v
+read_verilog verilog/mkSyndromeParallel.v
+read_verilog verilog/mkReedSolomon.v
+
+prep -flatten
+opt -full
+opt_clean
+write_verilog -simple-lhs -noattr yosys_mkReedSolomon.v
+write_cxxrtl yosys_mkReedSolomon.cpp
+synth_xilinx -family xcup -noiopad -noclkbuf
+opt -full
+opt_clean
+write_verilog -noattr yosys_mkReedSolomon_syn.v

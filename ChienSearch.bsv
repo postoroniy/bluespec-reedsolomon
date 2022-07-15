@@ -179,28 +179,24 @@ module mkChienSearch (IChienSearch);
    // ------------------------------------------------
    method Action no_error_flag_in (Bool no_error_new);
       $display ("  [chien %d]  no_error_in : %d", block_number, no_error_new);
-
       no_error_flag_q.enq(no_error_new);
    endmethod
 
    // ------------------------------------------------
    method Action t_in (Byte t_new);
       $display ("  [chien %d]  t_in : %d", block_number, t_new);
-
       t_q.enq(t_new);
    endmethod
 
    // ------------------------------------------------
    method Action k_in (Byte k_new);
       $display ("  [chien %d]  k_in : %d", block_number, k_new);
-
       k_q.enq(k_new);
    endmethod
 
    // ------------------------------------------------
    method Action lambda_in(Syndrome#(T) lambda_new);
       //$display ("  [chien %d]  lambda_in : %d", block_number, lambda_new);
-
       lambda_a_q.enq(lambda_new);
       lambda_q.enq(lambda_new);
    endmethod
@@ -210,7 +206,6 @@ module mkChienSearch (IChienSearch);
       $display ("  [chien %d]  loc_out : %d, stage : %d", block_number, loc_q.first(), stage);
       loc_q.deq();
       $display ("No of Errors %d", count_error);
-
       return loc_q.first();
    endmethod
 
@@ -219,14 +214,12 @@ module mkChienSearch (IChienSearch);
       $display ("  [chien %d]  alpha_inv_out : %d, stage : %d", block_number, alpha_inv_q.first(), stage);
       alpha_inv_q.deq();
       $display ("No of Errors %d", count_error);
-
       return alpha_inv_q.first();
    endmethod
 
    // ------------------------------------------------
    method ActionValue#(Bool) cant_correct_flag_out();
       $display ("  [chien %d]  Can't Correct Flag : %d", block_number, cant_correct_flag_q.first());
-
       cant_correct_flag_q.deq();
       return cant_correct_flag_q.first();
    endmethod
@@ -234,9 +227,7 @@ module mkChienSearch (IChienSearch);
    // ------------------------------------------------
    method ActionValue#(Syndrome#(T)) lambda_out();
       //$display ("  [chien %d]  lambda_out : %d", block_number, lambda_q.first());
-
       lambda_q.deq();
       return lambda_q.first();
    endmethod
-
 endmodule

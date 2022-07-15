@@ -1,20 +1,20 @@
 //----------------------------------------------------------------------//
-// The MIT License 
-// 
+// The MIT License
+//
 // Copyright (c) 2008 Abhinav Agarwal, Alfred Man Cheuk Ng
 // Contact: abhiag@gmail.com
-// 
-// Permission is hereby granted, free of charge, to any person 
-// obtaining a copy of this software and associated documentation 
-// files (the "Software"), to deal in the Software without 
+//
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without
 // restriction, including without limitation the rights to use,
 // copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the
 // Software is furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
 // OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -40,9 +40,8 @@ import "BDPI" function Action putNextStreamByte (Byte writeByte);
 import "BDPI" function Action putMACData (Byte n, Byte t);
 import "BDPI" function ActionValue# (Byte) isStreamActive ();
 import "BDPI" function Action closeOutputFile ();
-		 
-//Polynomial 	primitive_Sypolynomial = 8'b00011101;
-		 
+
+(* synthesize *)
 module mkTestBench ();
 
    // Define Primitive polynomial
@@ -65,7 +64,6 @@ module mkTestBench ();
    FIFO#(Bit#(32))   ff_bytes_out_exp     <- mkSizedFIFO (10);
    FIFO#(Byte)       ff_n                 <- mkSizedFIFO (10);
    FIFO#(Byte)       ff_t                 <- mkSizedFIFO (10);
- 
 
    // -------------------------------------------
    rule init (state==0);
@@ -74,7 +72,6 @@ module mkTestBench ();
       storeByteStream ();
       state <= 1;
    endrule
-   
 
    // -------------------------------------------
    rule input_control_info (state == 1 && read_done == False && bytes_in_block == n);
@@ -88,7 +85,7 @@ module mkTestBench ();
          n <= n_in;
          t <= t_in;
          bytes_in_block <= 0;
-         
+
          rs.rs_t_in.put (t_in);
          rs.rs_k_in.put (n_in - 2*t_in);
 
@@ -108,7 +105,6 @@ module mkTestBench ();
       end
    endrule
 
-
    // -------------------------------------------
    rule input_data (state == 1 && read_done == False && bytes_in_block < n);
       Byte not_eof <- isStreamActive ();
@@ -116,12 +112,10 @@ module mkTestBench ();
       begin
          Byte datum <- getNextStreamByte ();
          rs.rs_input.put (datum);
-
          bytes_in_block <= bytes_in_block + 1;
-
          // the way getNextStreamByte operates, we'll get one more character
          // than what is in the input file. So we need to adjust for this in
-         // the way we use bytes_in...                                      
+         // the way we use bytes_in...
          bytes_in <= bytes_in + 1;
          $display ("  [bytes in]  byte (%d) = %d, block bytes %d", bytes_in, datum, bytes_in_block);
       end
@@ -132,7 +126,6 @@ module mkTestBench ();
       end
    endrule
 
-
    // -------------------------------------------
    rule output_data (state == 1);
       Byte  next_byte <- rs.rs_output.get ();
@@ -140,7 +133,6 @@ module mkTestBench ();
       bytes_out <= bytes_out + 1;
       $display ("  [bytes out]  %d / %d", bytes_out, bytes_in - 1);
    endrule
-
 
    // -------------------------------------------
    rule output_mac (state == 1 && bytes_out == ff_bytes_out_exp.first ());
@@ -150,13 +142,11 @@ module mkTestBench ();
       putMACData (ff_n.first (), ff_t.first ());
    endrule
 
-
    // -------------------------------------------
    rule print_flag (state == 1);
       Bool cant_correct_flag  <- rs.rs_flag.get ();
       $display ("  [cant correct flag]  %d", cant_correct_flag);
    endrule
-   
 
    // -------------------------------------------
    rule watchdog_timer (state == 1);
@@ -181,12 +171,11 @@ module mkTestBench ();
       end
    endrule
 
-
    // -------------------------------------------
    rule exit (read_done == True && (bytes_out_exp) == bytes_out);
       closeOutputFile ();
       $display ("  [bytes written] %d", bytes_out);
       $finish (0);
    endrule
-		 
+
 endmodule

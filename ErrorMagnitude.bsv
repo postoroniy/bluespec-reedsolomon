@@ -102,7 +102,6 @@ module mkErrorMagnitude (IErrorMagnitude);
    // ------------------------------------------------
    rule enq_error (count == t);
       $display ("  [errMag %d]  Finish Evaluating Lambda Omega", block_number);
-
       let err_val = gf_mult(omega_val, gf_inv(lambda_d_val));
       int_err_q.enq(err_val);
       count <= 0;
@@ -113,7 +112,6 @@ module mkErrorMagnitude (IErrorMagnitude);
 
    rule deq_invalid_alpha_inv (alpha_inv_q.first() matches Invalid);
       $display ("  [errMag %d]  Deq Invalid Alpha Inv", block_number);
-
       alpha_inv_q.deq();
       lambda_q.deq();
       omega_q.deq();
@@ -121,12 +119,10 @@ module mkErrorMagnitude (IErrorMagnitude);
 
    // ------------------------------------------------
    rule process_error_no_error (i < k && !no_error_flag);
-
       Byte err_val;
       if (i == loc)
          begin
             $display ("  [errMag %d]  Processing location %d which is in error ", block_number, i);
-
             err_val = int_err_q.first();
             int_err_q.deq();
             loc_q.deq();
@@ -134,7 +130,6 @@ module mkErrorMagnitude (IErrorMagnitude);
       else
          begin
             $display ("  [errMag %d]  process location %d which has no error ", block_number, i);
-
             err_val = 0;
          end
       err_q.enq(err_val);
@@ -144,14 +139,12 @@ module mkErrorMagnitude (IErrorMagnitude);
    // ------------------------------------------------
    rule bypass(i < k && no_error_flag);
       $display ("  [errMag %d]  process location %d bypass which has no error ", block_number, i);
-
       i <= k;
    endrule
 
    // ------------------------------------------------
    rule start_next_errMag (i == k);
       $display ("Start Next ErrMag");
-
       k_q.deq();
       no_error_flag_q.deq();
       i <= 0;
@@ -165,42 +158,36 @@ module mkErrorMagnitude (IErrorMagnitude);
    // ------------------------------------------------
    method Action k_in(Byte k_new);
       $display ("  [errMag %d]  k_in : %d", block_number, k_new);
-
       k_q.enq(k_new);
    endmethod
 
    // ------------------------------------------------
    method Action no_error_flag_in(Bool no_error_new);
       $display ("  [errMag %d]  no_error_flag_in : %d", block_number, no_error_new);
-
       no_error_flag_q.enq(no_error_new);
    endmethod
 
    // ------------------------------------------------
    method Action loc_in(Maybe#(Byte) loc_new);
       $display ("  [errMag %d]  loc_in : %d", block_number, loc_new);
-
       loc_q.enq(loc_new);
    endmethod
 
    // ------------------------------------------------
    method Action alpha_inv_in(Maybe#(Byte) alpha_inv_new);
       $display ("  [errMag %d]  alpha_inv_in : %d", block_number, alpha_inv_new);
-
       alpha_inv_q.enq(alpha_inv_new);
    endmethod
 
    // ------------------------------------------------
    method Action lambda_in(Syndrome#(T) lambda_new);
       $display ("  [errMag %d]  lambda_in : %d", block_number, lambda_new);
-
       lambda_q.enq(lambda_new);
    endmethod
 
    // ------------------------------------------------
    method Action omega_in(Syndrome#(T) omega_new);
       $display ("  [errMag %d]  w_in : %d", block_number, omega_new);
-
       omega_q.enq(omega_new);
    endmethod
 
@@ -208,8 +195,6 @@ module mkErrorMagnitude (IErrorMagnitude);
    method ActionValue#(Byte) error_out();
       $display ("  [errMag %d]  err_out: %d", block_number, err_q.first());
       err_q.deq();
-
       return err_q.first();
    endmethod
-
 endmodule

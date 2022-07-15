@@ -31,29 +31,19 @@
 
 default : all
 
-# Sources
-srcdir  = .
 toplevel_module = mkTestBench
 
 PRIMITIVE_POLY ?= "0b100011101"
-K ?= 223
-T ?= 16
+K ?= 251
+T ?= 2
 N ?= 10
 NERR ?= $(T)
 
-#--------------------------------------------------------------------
-# Build rules
-#--------------------------------------------------------------------
-
-# run the rs_model to generate the GF inverse logic and test files
-input.dat ref_output.dat RSParameters.bsv:
-	./rs_model.py -P $(PRIMITIVE_POLY) -K $(K) -T $(T) -N $(N) -Nerr $(NERR) -bsv RSParameters.bsv
-
-BSC_COMP = bsc
+BSC_DIR ?=/home/slava/projects/bluespec/bsc
 BSC_FLAGS = -u -aggressive-conditions -keep-fires -no-show-method-conf \
 	-steps-warn-interval 200000 -steps-max-intervals 10 -show-schedule +RTS -K4000M -RTS
 
-BSC_VOPTS = -elab -verilog
+BSC_VOPTS = -elab -verilog -remove-dollar
 BSC_BAOPTS = -sim
 
 BDIR ?= build
@@ -61,39 +51,61 @@ VDIR ?= verilog
 IDIR ?= info
 SDIR ?= sim
 
+#--------------------------------------------------------------------
+# Build rules
+#--------------------------------------------------------------------
+
+# run the rs_model to generate the GF inverse logic and test files
+input.dat ref_output.dat:
+	./rs_model.py -P $(PRIMITIVE_POLY) -K $(K) -T $(T) -N $(N) -Nerr $(NERR)
+
+RSParameters.bsv:
+	./rs_model.py -P $(PRIMITIVE_POLY) -K $(K) -T $(T) -N 0 -bsv RSParameters.bsv
+
 # run gcc
 file_interface.o: file_interface.cpp
 	gcc -c -DDATA_FILE_PATH=\"./input.dat\" -DOUT_DATA_FILE_PATH=\"./output.dat\" file_interface.cpp -fPIC
 
 # Run the bluespec compiler
 $(BDIR)/$(toplevel_module).ba: RSParameters.bsv $(BDIR) $(VDIR) $(IDIR)
-	$(BSC_COMP) $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) -vdir $(VDIR) $(BSC_VOPTS) mkReedSolomon.bsv
-	$(BSC_COMP) $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) -vdir $(VDIR) $(BSC_BAOPTS) -g $(toplevel_module) $(toplevel_module).bsv
+	bsc $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) -vdir $(VDIR) $(BSC_VOPTS) $(toplevel_module).bsv
+	bsc $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) -vdir $(VDIR) $(BSC_BAOPTS) -g $(toplevel_module) $(toplevel_module).bsv
 
 $(toplevel_module): $(BDIR)/$(toplevel_module).ba file_interface.o $(SDIR)
-	$(BSC_COMP) $(BSC_BAOPTS) -simdir $(SDIR) -e $(toplevel_module) -o $(toplevel_module) $(BDIR)/*.ba file_interface.o
+	bsc $(BSC_BAOPTS) -simdir $(SDIR) -e $(toplevel_module) -o $(toplevel_module) $(BDIR)/*.ba file_interface.o
+
+$(toplevel_module).bsv: $(BDIR)/$(toplevel_module).ba
 
 all: input.dat output.dat ref_output.dat
 	diff -s -q output.dat ref_output.dat
 
 output.dat: $(toplevel_module)
-	./$(toplevel_module)
+	./$(toplevel_module) -V $(toplevel_module).vcd
 
 $(BDIR) $(VDIR) $(IDIR) $(SDIR):
 	mkdir -p $@
 
 # Create a schedule files
 $(IDIR)/$(toplevel_module).sched: RSParameters.bsv $(BDIR) $(IDIR)
-	$(BSC_COMP) $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) $(BSC_BAOPTS) -show-schedule -show-rule-rel \* \* -g $(toplevel_module) $(toplevel_module).bsv
+	bsc $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) $(BSC_BAOPTS) -show-schedule -show-rule-rel \* \* -g $(toplevel_module) $(toplevel_module).bsv
+
+# synthesys by yosys
+syn: ys_temp $(toplevel_module).bsv
+	yosys -s ys_temp > ys.log
+
+ys_temp:
+	echo read_verilog $(BSC_DIR)/inst/lib/Verilog/FIFO1.v >  $@
+	echo read_verilog $(BSC_DIR)/inst/lib/Verilog/FIFO2.v >> $@
+	echo read_verilog $(BSC_DIR)/inst/lib/Verilog/SizedFIFO.v >> $@
+	cat ys >> $@
 
 #--------------------------------------------------------------------
 # Clean up
 #--------------------------------------------------------------------
-
 .PHONY: clean
-clean :
-	rm -rf $(BDIR) $(VDIR) $(IDIR) $(SDIR) *.bo *.ba *.v *.sched *.so *.o $(toplevel_module) RSParameters.bsv *.dat
+clean:
+	rm -rf $(BDIR) $(VDIR) $(IDIR) $(SDIR) *.so *.o $(toplevel_module) RSParameters.bsv *.dat *.vcd ys.log ys_temp yosys_mkReedSolomon*
 
 .PHONY: clean_dat
-clean_dat :
+clean_dat:
 	rm -rf *.dat
