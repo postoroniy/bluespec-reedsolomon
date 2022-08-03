@@ -43,8 +43,8 @@ BSC_DIR ?=/home/slava/projects/bluespec/bsc
 BSC_FLAGS = -u -aggressive-conditions -keep-fires -no-show-method-conf \
 	-steps-warn-interval 200000 -steps-max-intervals 10 -show-schedule +RTS -K4000M -RTS
 
-BSC_VOPTS = -elab -verilog -remove-dollar
-BSC_BAOPTS = -sim
+BSC_VER_OPTS = -elab -verilog -remove-dollar
+BSC_SIM_OPTS = -sim
 
 BDIR ?= build
 VDIR ?= verilog
@@ -68,11 +68,11 @@ file_interface.o: file_interface.cpp
 
 # Run the bluespec compiler
 $(BDIR)/$(toplevel_module).ba: RSParameters.bsv $(BDIR) $(VDIR) $(IDIR)
-	bsc $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) -vdir $(VDIR) $(BSC_VOPTS) $(toplevel_module).bsv
-	bsc $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) -vdir $(VDIR) $(BSC_BAOPTS) -g $(toplevel_module) $(toplevel_module).bsv
+	bsc $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) -vdir $(VDIR) $(BSC_VER_OPTS) $(toplevel_module).bsv
+	bsc $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) -vdir $(VDIR) $(BSC_SIM_OPTS) -g $(toplevel_module) $(toplevel_module).bsv
 
 $(toplevel_module): $(BDIR)/$(toplevel_module).ba file_interface.o $(SDIR)
-	bsc $(BSC_BAOPTS) -simdir $(SDIR) -e $(toplevel_module) -o $(toplevel_module) $(BDIR)/*.ba file_interface.o
+	bsc $(BSC_SIM_OPTS) -simdir $(SDIR) -e $(toplevel_module) -o $(toplevel_module) $(BDIR)/*.ba file_interface.o
 
 $(toplevel_module).bsv: $(BDIR)/$(toplevel_module).ba
 
@@ -87,7 +87,11 @@ $(BDIR) $(VDIR) $(IDIR) $(SDIR):
 
 # Create a schedule files
 $(IDIR)/$(toplevel_module).sched: RSParameters.bsv $(BDIR) $(IDIR)
-	bsc $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) $(BSC_BAOPTS) -show-schedule -show-rule-rel \* \* -g $(toplevel_module) $(toplevel_module).bsv
+	bsc $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) $(BSC_SIM_OPTS) -show-schedule -show-rule-rel \* \* -g $(toplevel_module) $(toplevel_module).bsv
+
+.PHONY:vcd_view
+vcd_view:
+	gtkwave $(toplevel_module).vcd &
 
 # synthesys by yosys
 syn: ys_temp $(toplevel_module).bsv
