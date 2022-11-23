@@ -34,10 +34,10 @@ import Vector::*;
 // Reed-Solomon Syndrome calculator interface
 // ---------------------------------------------------------
 interface ISyndrome;
-   method Action                         n_in(Byte n_new); // dynamic n (shorten/punctured codeword)
-   method Action                         r_in(Byte datum);
+    method Action                         n_in(Byte n_new); // dynamic n (shorten/punctured codeword)
+    method Action                         r_in(Byte datum);
 
-   method ActionValue#(Syndrome#(TwoT))  s_out();
+    method ActionValue#(Syndrome#(TwoT))  s_out();
 endinterface
 
 // ---------------------------------------------------------
@@ -46,47 +46,44 @@ endinterface
 (* synthesize *)
 module mkSyndromeParallel(ISyndrome);
 
-   Reg#(Syndrome#(TwoT))   syndrome       <- mkReg(replicate(0));
-   FIFO#(Byte)             n_q            <- mkSizedFIFO(2);
-   Reg#(Byte)              i              <- mkReg(0);
-   Reg#(Byte)              block_number   <- mkReg(1);
+    Reg#(Syndrome#(TwoT))   syndrome       <- mkReg(replicate(0));
+    FIFO#(Byte)             n_q            <- mkSizedFIFO(2);
+    Reg#(Byte)              i              <- mkReg(0);
+    Reg#(Byte)              block_number   <- mkReg(1);
 
-   let n = n_q.first();
+    let n = n_q.first();
 
-   // ------------------------------------------------
-   method Action r_in (Byte datum) if (i < n);
-      $display ("  [syndrome %d]  r_in (%d): %d", block_number, i, datum);
-      Syndrome#(TwoT) syndrome_temp = replicate(0);
+    // ------------------------------------------------
+    method Action r_in (Byte datum) if (i < n);
+        $display ("  [syndrome %d]  r_in (%d): %d", block_number, i, datum);
+        Syndrome#(TwoT) syndrome_temp = replicate(0);
 
-      for (Byte x = 0; x < fromInteger(valueOf(TwoT)); x = x + 1)
-         begin
+        for (Byte x = 0; x < fromInteger(valueOf(TwoT)); x = x + 1) begin
             syndrome_temp[x] = times_alpha_n(syndrome[x], x + 1);
             syndrome_temp[x] = gf_add(syndrome_temp[x], datum);
-         end
+        end
 
-      syndrome <= syndrome_temp;
-      i <= i + 1;
-   endmethod
+        syndrome <= syndrome_temp;
+        i <= i + 1;
+    endmethod
 
-   // ------------------------------------------------
-   method ActionValue#(Syndrome#(TwoT)) s_out() if (i == n);
-      $display ("  [syndrome %d]  s_out", block_number);
+    // ------------------------------------------------
+    method ActionValue#(Syndrome#(TwoT)) s_out() if (i == n);
+        $display ("  [syndrome %d]  s_out", block_number);
 
-      // consider the next n
-      n_q.deq();
-      // reset state
-      i <= 0;
-      syndrome <= replicate(0);
-      // incr block_numer (just for bookkeeping)
-      block_number <= block_number + 1;
-      return syndrome;
-   endmethod
+        // consider the next n
+        n_q.deq();
+        // reset state
+        i <= 0;
+        syndrome <= replicate(0);
+        // incr block_numer (just for bookkeeping)
+        block_number <= block_number + 1;
+        return syndrome;
+    endmethod
 
-   // ------------------------------------------------
-   method Action n_in (Byte n_new);
-      $display ("  [syndrome %d]  n_in : %d", block_number, n_new);
-
-      n_q.enq(n_new);
-   endmethod
-
+    // ------------------------------------------------
+    method Action n_in (Byte n_new);
+        $display ("  [syndrome %d]  n_in : %d", block_number, n_new);
+        n_q.enq(n_new);
+    endmethod
 endmodule

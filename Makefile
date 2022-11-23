@@ -60,7 +60,7 @@ input.dat ref_output.dat:
 	./rs_model.py -P $(PRIMITIVE_POLY) -K $(K) -T $(T) -N $(N) -Nerr $(NERR)
 
 RSParameters.bsv:
-	./rs_model.py -P $(PRIMITIVE_POLY) -K $(K) -T $(T) -N 0 -bsv RSParameters.bsv
+	./rs_model.py -P $(PRIMITIVE_POLY) -K $(K) -T $(T) -N 0 -bsv $@
 
 # run gcc
 file_interface.o: file_interface.cpp
@@ -71,12 +71,12 @@ $(BDIR)/$(toplevel_module).ba: RSParameters.bsv $(BDIR) $(VDIR) $(IDIR)
 	bsc $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) -vdir $(VDIR) $(BSC_VER_OPTS) $(toplevel_module).bsv
 	bsc $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) -vdir $(VDIR) $(BSC_SIM_OPTS) -g $(toplevel_module) $(toplevel_module).bsv
 
-$(toplevel_module): $(BDIR)/$(toplevel_module).ba file_interface.o $(SDIR)
+$(toplevel_module): input.dat $(BDIR)/$(toplevel_module).ba file_interface.o $(SDIR)
 	bsc $(BSC_SIM_OPTS) -simdir $(SDIR) -e $(toplevel_module) -o $(toplevel_module) $(BDIR)/*.ba file_interface.o
 
 $(toplevel_module).bsv: $(BDIR)/$(toplevel_module).ba
 
-all: input.dat output.dat ref_output.dat
+all: output.dat ref_output.dat
 	diff -s -q output.dat ref_output.dat
 
 output.dat: $(toplevel_module)
@@ -89,7 +89,6 @@ $(BDIR) $(VDIR) $(IDIR) $(SDIR):
 $(IDIR)/$(toplevel_module).sched: RSParameters.bsv $(BDIR) $(IDIR)
 	bsc $(BSC_FLAGS) -bdir $(BDIR) -info-dir $(IDIR) $(BSC_SIM_OPTS) -show-schedule -show-rule-rel \* \* -g $(toplevel_module) $(toplevel_module).bsv
 
-.PHONY:vcd_view
 vcd_view:
 	gtkwave $(toplevel_module).vcd &
 
@@ -106,10 +105,8 @@ ys_temp:
 #--------------------------------------------------------------------
 # Clean up
 #--------------------------------------------------------------------
-.PHONY: clean
 clean:
 	rm -rf $(BDIR) $(VDIR) $(IDIR) $(SDIR) *.so *.o $(toplevel_module) RSParameters.bsv *.dat *.vcd ys.log ys_temp yosys_mkReedSolomon*
 
-.PHONY: clean_dat
 clean_dat:
 	rm -rf *.dat

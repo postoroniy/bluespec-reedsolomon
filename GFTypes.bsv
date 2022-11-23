@@ -29,32 +29,32 @@
 // Type definitions for use in the Reed-Solomon modules
 //-------------------------------------------------------------
 package GFTypes;
-  import Vector::*;
-  import RSParameters::*;
+    import Vector::*;
+    import RSParameters::*;
 
-  typedef Bit#(8)         Byte;
-  typedef Byte            Polynomial;
-  typedef Vector#(n,Byte) Syndrome#(numeric type n);
+    typedef Bit#(8)         Byte;
+    typedef Byte            Polynomial;
+    typedef Vector#(n,Byte) Syndrome#(numeric type n);
 
-  typedef enum
-  {  NO_ERROR,
-     CORRECTABLE,
-     INCORRECTABLE
-   } ErrInfo deriving (Bits, Eq);
+    typedef enum{
+        NO_ERROR,
+        CORRECTABLE,
+        INCORRECTABLE
+    } ErrInfo deriving (Bits, Eq);
 
-  typedef TMul#(T,2) TwoT;     // 2 * T
-  typedef TAdd#(T,2) TPlusTwo; // T + 2
-  typedef TDiv#(T,2) HalfT;    // T/2
+    typedef TMul#(T,2) TwoT;     // 2 * T
+    typedef TAdd#(T,2) TPlusTwo; // T + 2
+    typedef TDiv#(T,2) HalfT;    // T/2
 
-  // -----------------------------------------------------------
-  // The primitive polynomial defines the Galois field in which
-  // Reed-Solomon decoder operates, and all the following
-  // arithmetic operations are defined under.  Changing this
-  // value cause the whole Reed-Solomon decoder to operate
-  // under the new primitive polynomial.
-  // primitive_polynomial[i] = Coefficient of x**i for i = 0:7
+    // -----------------------------------------------------------
+    // The primitive polynomial defines the Galois field in which
+    // Reed-Solomon decoder operates, and all the following
+    // arithmetic operations are defined under.  Changing this
+    // value cause the whole Reed-Solomon decoder to operate
+    // under the new primitive polynomial.
+    // primitive_polynomial[i] = Coefficient of x**i for i = 0:7
 
-  // -----------------------------------------------------------
-  Byte    n_param = 8'd255;
-  Byte    t_param = fromInteger(valueOf(T));
+    // -----------------------------------------------------------
+    Byte    n_param = 8'd255;
+    Byte    t_param = fromInteger(valueOf(T));
 endpackage

@@ -39,46 +39,44 @@ import RSParameters::*;
 //(* noinline *)
 function Byte gf_mult(Byte left, Byte right);
 
-   Bit#(15) first  = 15'b0;
-   Bit#(15) result = 15'b0;
+    Bit#(15) first  = 15'b0;
+    Bit#(15) result = 15'b0;
 
-   // this function bring back higher degree values back to the field
-   function Bit#(15) getNewResult(Integer shift, Bit#(15) res);
-      Bit#(15) shiftPoly = zeroExtend(primitive_poly) << shift;
-      Bit#(15) newRes    = res ^ ((res[8+shift] == 1'b1) ? shiftPoly : 0);
-      return newRes;
-   endfunction
+    // this function bring back higher degree values back to the field
+    function Bit#(15) getNewResult(Integer shift, Bit#(15) res);
+        Bit#(15) shiftPoly = zeroExtend(primitive_poly) << shift;
+        Bit#(15) newRes    = res ^ ((res[8+shift] == 1'b1) ? shiftPoly : 0);
+        return newRes;
+    endfunction
 
-  for (Integer i = 0; i < 8; i = i + 1)
-     for (Integer j = 0; j < 8 ; j = j + 1)
-        begin
-           if (first[i+j] == 0) // initialize result[i+j]
-              result[i+j] = (left[i] & right[j]);
-           else                 // accumulate
-              result[i+j] = result[i+j] ^ (left[i] & right[j]);
-           first[i+j] = 1; // only initialize each signal once
+    for (Integer i = 0; i < 8; i = i + 1)
+        for (Integer j = 0; j < 8 ; j = j + 1)begin
+            if (first[i+j] == 0) // initialize result[i+j]
+                result[i+j] = (left[i] & right[j]);
+            else                 // accumulate
+                result[i+j] = result[i+j] ^ (left[i] & right[j]);
+            first[i+j] = 1; // only initialize each signal once
         end
 
-  Vector#(7,Integer) shftAmntV = genVector;
-  Bit#(15) finalResult = foldr(getNewResult,result,shftAmntV);
+    Vector#(7,Integer) shftAmntV = genVector;
+    Bit#(15) finalResult = foldr(getNewResult,result,shftAmntV);
 
-  return finalResult[7:0];
-
+    return finalResult[7:0];
 endfunction
 
 (* noinline *)
 function Byte gf_mult_inst(Byte x, Byte y);
-   return gf_mult(x,y);
+    return gf_mult(x,y);
 endfunction
 
 // -----------------------------------------------------------
 function Byte gf_add(Byte left, Byte right);
-   return (left ^ right);
+    return (left ^ right);
 endfunction
 
 (* noinline *)
 function Byte gf_add_inst(Byte x, Byte y);
-   return gf_add(x,y);
+    return gf_add(x,y);
 endfunction
 
 
@@ -93,15 +91,15 @@ endfunction
 function Byte times_alpha_n(Byte a, Byte n);
 //    Byte multVal = 1 << n;
 //    return gf_mult(primitive_poly,a,multVal);
-   Byte b=a;
-   for (Byte i = 0; i < n; i = i + 1)
-      b=times_alpha(b);
-   return b;
+    Byte b=a;
+    for (Byte i = 0; i < n; i = i + 1)
+        b=times_alpha(b);
+    return b;
 endfunction
 
 // -----------------------------------------------------------
 //(* noinline *)
 function Byte times_alpha(Byte a);
 //   return gf_mult(primitive_poly, a, 2);
-   return (a<<1)^({a[7],a[7],a[7],a[7],a[7],a[7],a[7],a[7]} & primitive_poly);
+    return (a<<1)^({a[7],a[7],a[7],a[7],a[7],a[7],a[7],a[7]} & primitive_poly);
 endfunction
